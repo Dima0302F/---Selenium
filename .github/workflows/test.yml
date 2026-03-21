@@ -10,6 +10,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     
     steps:
     - name: Клонирование репозитория
@@ -46,6 +48,8 @@ jobs:
   generate-report:
     needs: test
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # 👈 ДОБАВЛЕНО: права на запись для деплоя
     if: always()
     
     steps:
@@ -58,40 +62,45 @@ jobs:
         name: allure-results
         path: allure-results
     
-    - name: Установка Java (требуется для Allure)
+    - name: Установка Java
       run: |
         sudo apt-get update
         sudo apt-get install -y openjdk-11-jre-headless
         java -version
     
-    - name: Установка Allure через официальный скрипт
+    - name: Установка Allure
       run: |
-        # Скачиваем последнюю версию Allure
+        # Скачиваем Allure
         curl -Lo allure.zip https://github.com/allure-framework/allure2/releases/download/2.27.0/allure-2.27.0.zip
-        # Распаковываем
         unzip allure.zip
-        # Перемещаем в /opt
         sudo mv allure-2.27.0 /opt/allure
         # Создаем символическую ссылку
         sudo ln -sf /opt/allure/bin/allure /usr/local/bin/allure
+        # Добавляем в PATH для текущего runner
+        echo "/opt/allure/bin" >> $GITHUB_PATH
         # Проверяем установку
-        allure --version
+        /usr/local/bin/allure --version
+    
     - name: Диагностика установки Allure
       run: |
         echo "=== Поиск allure ==="
         which allure || echo "allure not in PATH"
-        ls -la /usr/local/bin/allure || echo "symlink not found"
-        ls -la /opt/allure/bin/ || echo "allure not installed"
+        echo "=== Версия Allure ==="
+        /usr/local/bin/allure --version
         echo "=== Проверка PATH ==="
         echo $PATH
         echo "=== Проверка Java ==="
         java -version
+        echo "=== Содержимое allure-results ==="
+        ls -la allure-results/ | head -20
+        echo "=== Количество файлов ==="
+        echo "Всего файлов: $(ls -1 allure-results/ | wc -l)"
+    
     - name: Генерация Allure отчета
       run: |
-        echo "Содержимое allure-results:"
-        ls -la allure-results/
-        echo "Количество файлов: $(ls -1 allure-results/ | wc -l)"
         /usr/local/bin/allure generate allure-results -o allure-report --clean
+        echo "Отчет сгенерирован, проверяем содержимое:"
+        ls -la allure-report/ | head -10
     
     - name: Сохранение Allure отчета
       uses: actions/upload-artifact@v4
@@ -107,3 +116,6 @@ jobs:
         publish_dir: ./allure-report
         publish_branch: gh-pages
         keep_files: false
+        user_name: 'github-actions[bot]'
+        user_email: 'github-actions[bot]@users.noreply.github.com'
+        commit_message: 'Deploy Allure report'
