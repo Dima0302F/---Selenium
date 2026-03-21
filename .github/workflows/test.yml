@@ -14,10 +14,10 @@ jobs:
     
     steps:
     - name: Клонирование репозитория
-      uses: actions/checkout@v4
+      uses: actions/checkout@v3  # Временная версия Node.js 16
     
     - name: Установка Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v4  # Временная версия Node.js 16
       with:
         python-version: '3.10'
     
@@ -30,15 +30,16 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y google-chrome-stable
+        google-chrome --version
     
     - name: Запуск тестов с Allure
       run: |
         pytest test_form.py -v --alluredir=allure-results --clean-alluredir
-      continue-on-error: true  # Продолжаем даже если тесты упали
+      continue-on-error: true
     
     - name: Сохранение результатов тестов
-      uses: actions/upload-artifact@v4
-      if: always()  # Сохраняем даже при ошибках
+      uses: actions/upload-artifact@v3  # Временная версия Node.js 16
+      if: always()
       with:
         name: allure-results
         path: allure-results
@@ -46,31 +47,40 @@ jobs:
 
   # Второй job: Генерация и публикация отчета
   generate-report:
-    needs: test  # Ждем завершения job test
+    needs: test
     runs-on: ubuntu-latest
-    if: always()  # Запускаем даже если тесты упали
+    if: always()
     
     steps:
     - name: Клонирование репозитория
-      uses: actions/checkout@v4
+      uses: actions/checkout@v3  # Временная версия Node.js 16
     
     - name: Загрузка результатов тестов
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v3  # Временная версия Node.js 16
       with:
         name: allure-results
         path: allure-results
     
-    - name: Установка Allure
+    - name: Установка Allure (исправленная версия)
       run: |
-        sudo apt-get update
-        sudo apt-get install -y allure
+        # Скачиваем Allure
+        wget https://github.com/allure-framework/allure2/releases/download/2.27.0/allure-2.27.0.tgz
+        # Распаковываем
+        tar -zxvf allure-2.27.0.tgz
+        # Добавляем в PATH
+        echo "$(pwd)/allure-2.27.0/bin" >> $GITHUB_PATH
+        # Проверяем установку
+        allure --version
     
     - name: Генерация Allure отчета
       run: |
+        # Проверяем наличие результатов
+        ls -la allure-results/
+        # Генерируем отчет
         allure generate allure-results -o allure-report --clean
     
     - name: Сохранение Allure отчета
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v3  # Временная версия Node.js 16
       with:
         name: allure-report
         path: allure-report
