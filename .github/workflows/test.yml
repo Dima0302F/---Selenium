@@ -9,83 +9,62 @@ jobs:
   test:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-    
+      contents: read  # Только чтение для тестов
     steps:
-    - name: Клонирование репозитория
-      uses: actions/checkout@v4
-    
-    - name: Установка Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
-    
-    - name: Установка зависимостей
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-    
-    - name: Установка Chrome
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y google-chrome-stable
-    
-    - name: Запуск тестов
-      run: |
-        pytest test_form.py -v --alluredir=allure-results --clean-alluredir
-      continue-on-error: true
-    
-    - name: Сохранение результатов
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: allure-results
-        path: allure-results
-        retention-days: 30
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
+      - name: Run tests
+        run: pytest test_form.py -v --alluredir=allure-results --clean-alluredir
+        continue-on-error: true
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: allure-results
+          path: allure-results
 
-  generate-report:
+  publish-report:
     needs: test
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write  # <--- ЭТО КЛЮЧЕВОЕ: даем права на запись для деплоя
     if: always()
-    
     steps:
-    - name: Клонирование репозитория
-      uses: actions/checkout@v4
-    
-    - name: Загрузка результатов
-      uses: actions/download-artifact@v4
-      with:
-        name: allure-results
-        path: allure-results
-    
-    - name: Установка Java
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y openjdk-11-jre-headless
-    
-    - name: Установка Allure
-      run: |
-        curl -Lo allure.zip https://github.com/allure-framework/allure2/releases/download/2.27.0/allure-2.27.0.zip
-        unzip allure.zip
-        sudo mv allure-2.27.0 /opt/allure
-        sudo ln -sf /opt/allure/bin/allure /usr/local/bin/allure
-    
-    - name: Генерация отчета
-      run: |
-        /usr/local/bin/allure generate allure-results -o allure-report --clean
-    
-    - name: Сохранение отчета
-      uses: actions/upload-artifact@v4
-      with:
-        name: allure-report
-        path: allure-report
-    
-    - name: Деплой на GitHub Pages
-      uses: peaceiris/actions-gh-pages@v4
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./allure-report
-        publish_branch: gh-pages
-        force_orphan: true
+      - uses: actions/checkout@v4
+      - name: Download test results
+        uses: actions/download-artifact@v4
+        with:
+          name: allure-results
+          path: allure-results
+
+      - name: Setup Java
+        run: sudo apt-get update && sudo apt-get install -y openjdk-11-jre-headless
+
+      - name: Install Allure
+        run: |
+          curl -Lo allure.zip https://github.com/allure-framework/allure2/releases/download/2.27.0/allure-2.27.0.zip
+          unzip allure.zip
+          sudo mv allure-2.27.0 /opt/allure
+          sudo ln -sf /opt/allure/bin/allure /usr/local/bin/allure
+          /usr/local/bin/allure --version  # Проверка установки
+
+      - name: Generate Allure Report
+        run: /usr/local/bin/allure generate allure-results -o allure-report --clean
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./allure-report
+          publish_branch: gh-pages
+          force_orphan: true
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
