@@ -76,7 +76,7 @@ jobs:
         sudo ln -sf /opt/allure/bin/allure /usr/local/bin/allure
         # Проверяем установку
         allure --version
-        - name: Диагностика установки Allure
+    - name: Диагностика установки Allure
       run: |
         echo "=== Поиск allure ==="
         which allure || echo "allure not in PATH"
