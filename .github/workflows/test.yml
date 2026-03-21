@@ -76,7 +76,16 @@ jobs:
         sudo ln -sf /opt/allure/bin/allure /usr/local/bin/allure
         # Проверяем установку
         allure --version
-    
+        - name: Диагностика установки Allure
+      run: |
+        echo "=== Поиск allure ==="
+        which allure || echo "allure not in PATH"
+        ls -la /usr/local/bin/allure || echo "symlink not found"
+        ls -la /opt/allure/bin/ || echo "allure not installed"
+        echo "=== Проверка PATH ==="
+        echo $PATH
+        echo "=== Проверка Java ==="
+        java -version
     - name: Генерация Allure отчета
       run: |
         echo "Содержимое allure-results:"
