@@ -58,15 +58,31 @@ jobs:
         name: allure-results
         path: allure-results
     
-    - name: Установка Allure
+    - name: Установка Java (требуется для Allure)
       run: |
-        wget https://github.com/allure-framework/allure2/releases/download/2.27.0/allure-2.27.0.tgz
-        tar -xzf allure-2.27.0.tgz
-        echo "$(pwd)/allure-2.27.0/bin" >> $GITHUB_PATH
+        sudo apt-get update
+        sudo apt-get install -y openjdk-11-jre-headless
+        java -version
+    
+    - name: Установка Allure через официальный скрипт
+      run: |
+        # Скачиваем последнюю версию Allure
+        curl -Lo allure.zip https://github.com/allure-framework/allure2/releases/download/2.27.0/allure-2.27.0.zip
+        # Распаковываем
+        unzip allure.zip
+        # Перемещаем в /opt
+        sudo mv allure-2.27.0 /opt/allure
+        # Создаем символическую ссылку
+        sudo ln -sf /opt/allure/bin/allure /usr/local/bin/allure
+        # Проверяем установку
+        allure --version
     
     - name: Генерация Allure отчета
       run: |
-        allure generate allure-results -o allure-report --clean
+        echo "Содержимое allure-results:"
+        ls -la allure-results/
+        echo "Количество файлов: $(ls -1 allure-results/ | wc -l)"
+        /usr/local/bin/allure generate allure-results -o allure-report --clean
     
     - name: Сохранение Allure отчета
       uses: actions/upload-artifact@v4
