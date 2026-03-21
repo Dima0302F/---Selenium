@@ -9,7 +9,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     permissions:
-      contents: read  # Только чтение для тестов
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
@@ -21,7 +21,7 @@ jobs:
           pip install -r requirements.txt
           sudo apt-get update
           sudo apt-get install -y google-chrome-stable
-      - name: Run tests
+      - name: Run tests with Allure
         run: pytest test_form.py -v --alluredir=allure-results --clean-alluredir
         continue-on-error: true
       - name: Upload test results
@@ -35,7 +35,7 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # <--- ЭТО КЛЮЧЕВОЕ: даем права на запись для деплоя
+      contents: write
     if: always()
     steps:
       - uses: actions/checkout@v4
@@ -44,21 +44,16 @@ jobs:
         with:
           name: allure-results
           path: allure-results
-
       - name: Setup Java
         run: sudo apt-get update && sudo apt-get install -y openjdk-11-jre-headless
-
       - name: Install Allure
         run: |
           curl -Lo allure.zip https://github.com/allure-framework/allure2/releases/download/2.27.0/allure-2.27.0.zip
           unzip allure.zip
           sudo mv allure-2.27.0 /opt/allure
           sudo ln -sf /opt/allure/bin/allure /usr/local/bin/allure
-          /usr/local/bin/allure --version  # Проверка установки
-
       - name: Generate Allure Report
         run: /usr/local/bin/allure generate allure-results -o allure-report --clean
-
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
@@ -66,5 +61,3 @@ jobs:
           publish_dir: ./allure-report
           publish_branch: gh-pages
           force_orphan: true
-          user_name: 'github-actions[bot]'
-          user_email: 'github-actions[bot]@users.noreply.github.com'
